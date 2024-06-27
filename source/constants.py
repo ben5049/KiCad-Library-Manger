@@ -1,0 +1,8 @@
+ACTION_IMPORT = "import"
+ACTION_LIST = [ACTION_IMPORT]
+
+SOURCE_CSE = "cse" # Component Search engine
+SOURCE_EEC = "eec" # EE Concierge
+SOURCE_SNAP = "snap" # SnapEDA
+SOURCE_LIST = [SOURCE_CSE, SOURCE_EEC, SOURCE_SNAP]
+SOURCE_DEFAULT = SOURCE_CSE
