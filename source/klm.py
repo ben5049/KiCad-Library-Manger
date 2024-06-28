@@ -36,13 +36,10 @@ def parse_args() -> Any:
 
     parser.add_argument("action",
                         action="store",
-                        nargs=1,
                         default=None,
                         type=str,
                         choices=ACTION_LIST,
-                        required=True,
-                        help="Action to execute",
-                        dest="action")
+                        help="Action to execute")
     
     parser.add_argument("-i",
                         "--input",
