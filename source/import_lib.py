@@ -4,45 +4,94 @@ from typing import Optional, Any
 
 from constants import *
 from utils import user_select_from_list
-from parser import Parser
+from kiparser import KiParser
 
 LOGGER = logging.getLogger(__name__)
 
 
 class ImportLib:
 
-    def __init__(self, input_library_path: Optional[str] = "", library_source: Optional[str] = SOURCE_DEFAULT) -> None:
+    def __init__(self, input_library_path: Optional[str] = "",
+                 library_source:           Optional[str] = SOURCE_DEFAULT,
+                 symbol_name:              Optional[str] = "",
+                 footprint_name:           Optional[str] = "",
+                 model_name:               Optional[str] = "") -> None:
+        """
+        """
 
         # Initialise empty attributes
-        self._input_library_path      = None # e.g. "../zipfiles/LIB_M24256X-FCU6T_VF.zip"
-        self._input_library_extension = None # e.g. "zip"
-        self._input_source            = None # e.g. "cse"
+        self._input_library_path      = str() # e.g. "../zipfiles/LIB_M24256X-FCU6T_VF.zip"
+        self._input_library_name      = str()
+        self._input_library_extension = str() # e.g. "zip"
+        self._input_source            = str() # e.g. "cse"
+        self._input_model_extension   = str()
 
-        self._imported_symbol    = None
-        self._imported_footprint = None
-        self._imported_model     = None
+        self._symbol    = str()
+        self._footprint = str()
+        self._model     = str()
 
-        self._output_symbol_name    = None
-        self._output_footprint_name = None
-        self._output_model_name     = None
+        self._output_symbol_name    = str()
+        self._output_footprint_name = str()
+        self._output_model_name     = str()
 
         # Apply input values to attributes
-        self.set_input_library(input_library_path)
-        self.set_source(library_source)
+        self.set_symbol_name(symbol_name)
+        self.set_footprint_name(footprint_name)
+        self.set_model_name(model_name)
+        self.set_input_library(input_library_path, library_source)
 
-    def set_input_library(self, input_library_path: str) -> None:
+    def set_input_library(self, input_library_path: str, library_source: str, force_set_names: Optional[bool] = False) -> None:
+        """
+        force_set_names sets the symbol, footprint and model names to the library name, even if already set
+        """
+        
         self._input_library_path = input_library_path
+        self._input_source = library_source
 
         if self._input_library_path.count("."):
             self._input_library_extension = self._input_library_path.split(".")[-1] # TODO: Redo with handling for directories
         else:
             self._input_library_extension = None
-        
-    def set_source(self, library_source: str) -> None:
+
+        # Set self._input_library_name
+        if self._input_source == SOURCE_CSE:
+            self._input_library_name = self._input_library_path.split("LIB_")[-1].split(".")[(-2 if self._input_library_extension is not None else -1)].replace(" ", "_")
+        elif self._input_source == SOURCE_EEC:
+            LOGGER.error(f"WRITE THIS CODE, exiting") # TODO
+            exit(1)
+        elif self._input_source == SOURCE_SNAP:
+            LOGGER.error(f"WRITE THIS CODE, exiting") # TODO
+            exit(1)
+        else:
+            LOGGER.error(f"Unsupported source '{self._input_source}', exiting")
+            exit(1)
+
+        # Set symbol name if required
+        if not self._output_symbol_name or force_set_names:
+            self.set_symbol_name(self._input_library_name)
+
+        # Set footprint name if required
+        if not self._output_footprint_name or force_set_names:
+            self.set_footprint_name(self._input_library_name)
+
+        # Set model name if required
+        if not self._output_model_name or force_set_names:
+            self.set_model_name(self._input_library_name)
+
+    def set_symbol_name(self, symbol_name: str) -> None:
         """
-        Source of the library
         """
-        self._input_source = library_source
+        self._output_symbol_name = symbol_name
+
+    def set_footprint_name(self, footprint_name: str) -> None:
+        """
+        """
+        self._output_footprint_name = footprint_name
+
+    def set_model_name(self, model_name: str) -> None:
+        """
+        """
+        self._output_model_name = model_name
 
     def __import_zipped(self) -> None:
         LOGGER.info(f"Function 'import_cse_zipped' is WIP")
@@ -51,14 +100,10 @@ class ImportLib:
         footprints_found = []
         models_found     = []
 
-        symbol_file_name    = None
-        footprint_file_name = None
-        model_file_name     = None
-
         with ZipFile(self._input_library_path, "r") as zipfile:
 
             for name in zipfile.namelist():
-                extension = name.split(".")[-1] # TODO: Make sure split is successful
+                extension = name.split(".")[-1] if name.count(".") else "invalid"
 
                 if extension in SYMBOL_EXTENSIONS:
                     symbols_found.append(name)
@@ -73,7 +118,7 @@ class ImportLib:
                 LOGGER.info(f"Importing '{symbol_file_name}'")
                 try:
                     with zipfile.open(symbol_file_name, "r") as symbol_file:
-                        self._imported_symbol = symbol_file.read().decode("utf-8")
+                        self._symbol = symbol_file.read().decode(ENCODING)
                 except Exception as e:
                     # TODO: Change the line above to an approprate exception and handle properly
                     LOGGER.error(e)
@@ -87,7 +132,7 @@ class ImportLib:
                 LOGGER.info(f"Importing '{footprint_file_name}'")
                 try:
                     with zipfile.open(footprint_file_name, "r") as footprint_file:
-                        self._imported_footprint = footprint_file.read().decode("utf-8")
+                        self._footprint = footprint_file.read().decode(ENCODING)
                 except Exception as e:
                     # TODO: Change the line above to an approprate exception and handle properly
                     LOGGER.error(e)
@@ -98,10 +143,11 @@ class ImportLib:
             # Get model
             if models_found:
                 model_file_name = user_select_from_list(models_found, "model file")
+                self._input_model_extension = model_file_name.split(".")[-1]
                 LOGGER.info(f"Importing '{model_file_name}'")
                 try:
                     with zipfile.open(model_file_name, "r") as model_file:
-                        self._imported_model = model_file.read().decode("utf-8")
+                        self._model = model_file.read().decode(ENCODING)
                 except Exception as e:
                     # TODO: Change the line above to an approprate exception and handle properly
                     LOGGER.error(e)
@@ -114,24 +160,47 @@ class ImportLib:
         LOGGER.error(f"Function '__import' hasn't been implemented, exiting")
         exit(1)
     
-    def __relink(self) -> None:
+    def __relink_symbol_footprint(self) -> None:
         """
-        1. Set the symbol's footprint to the library name
-        2. Set the footprint's model to the library name
+        Link the symbol to the footprint
         """
 
-        LOGGER.warning(f"Function '__relink' is WIP")
-        
-        symbol_parser = Parser(self._imported_symbol)
-        self._imported_symbol = symbol_parser.rename_node(node_type="property", old_node_name="\"Footprint\"", old_node_name_start_only=True, new_node_name=f"\"Footprint\" \"temp\"") # TODO: Change "temp"
+        symbol_parser = KiParser(self._symbol)
+        self._symbol = symbol_parser.rename_node("property \"Footprint\"", f"\"{self._output_footprint_name}.kicad_mod\"") # TODO: Add output library
 
-        footprint_parser = Parser(self._imported_footprint)
-        self._imported_footprint = footprint_parser.rename_node(node_type="model", old_node_name="", old_node_name_start_only=True, new_node_name="temp.stp")
+    def __relink_footprint_model(self) -> None:
+        """
+        Link the footprint to the model
+        """
+
+        footprint_parser = KiParser(self._footprint)
+        self._footprint = footprint_parser.rename_node("model", f"{self._output_model_name}.{self._input_model_extension}") # TODO: Change "temp.stp"
+
+    def write_symbol_file(self):
+        """
+        """
+        # TODO: Add path to output
+        with open(f"{self._output_symbol_name}.kicad_sym", "w", newline='') as file:
+            file.write(self._symbol)
+
+    def write_footprint_file(self):
+        """
+        """
+        # TODO: Add path to output
+        with open(f"{self._output_footprint_name}.kicad_mod", "w", newline='') as file:
+            file.write(self._footprint)
+
+    def write_model_file(self):
+        """
+        """
+        # TODO: Add path to output
+        with open(f"{self._output_model_name}.{self._input_model_extension}", "w", newline='') as file:
+            file.write(self._model)
 
     def import_single(self) -> None:
         """
         """
-        
+
         if self._input_library_extension is None:
             self.__import()
         elif self._input_library_extension == "zip":
@@ -140,16 +209,16 @@ class ImportLib:
             LOGGER.error(f"Unsupported library extension '.{self._input_library_extension}', exiting")
             exit(1)
 
-        with open("symbol.txt", "w") as file:
-            file.write(self._imported_symbol)
+        if self._symbol and self._footprint:
+            self.__relink_symbol_footprint()
 
-        self.__relink()
+        if self._footprint and self._model:
+            self.__relink_footprint_model()
 
-        with open("symbol_edited.txt", "w", newline='') as file:
-            file.write(self._imported_symbol)
 
-        with open("footprint_edited.txt", "w", newline='') as file:
-            file.write(self._imported_footprint)
+        self.write_symbol_file()
+        self.write_footprint_file()
+        self.write_model_file()
 
     def import_multi(self) -> None:
         LOGGER.error(f"Function 'import_multi' hasn't been implemented, exiting")

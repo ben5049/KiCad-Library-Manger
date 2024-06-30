@@ -10,3 +10,5 @@ SOURCE_DEFAULT = SOURCE_CSE
 SYMBOL_EXTENSIONS = ["kicad_sym"]
 FOOTPRINT_EXTENSIONS = ["kicad_mod"]
 MODEL_EXTENSIONS = ["stp", "step"]
+
+ENCODING = "utf-8"
