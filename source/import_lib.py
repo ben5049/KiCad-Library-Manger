@@ -183,7 +183,12 @@ class ImportLib:
         """
 
         symbol_parser = KiParser(self._symbol)
-        self._symbol = symbol_parser.rename_node("property \"Footprint\"", f"\"{self._output_footprint_library + (":" if self._output_footprint_library else "")}{self._output_footprint_name}.kicad_mod\"")
+        
+        if self._output_footprint_library:
+            self._symbol = symbol_parser.rename_node("property \"Footprint\"", f"\"{self._output_footprint_library}:{self._output_footprint_name}.kicad_mod\"")
+        else:
+            self._symbol = symbol_parser.rename_node("property \"Footprint\"", f"\"{self._output_footprint_name}.kicad_mod\"")
+
 
     def __relink_footprint_model(self) -> None:
         """

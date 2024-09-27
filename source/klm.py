@@ -15,7 +15,7 @@ class Klm:
         self.action = args.action
 
         # Composition
-        self.importer = ImportLib(args.input)
+        self.importer = ImportLib(input_library_path=args.input, footprint_library="drone_footprints")
 
 
     def __del__(self) -> None:
@@ -24,8 +24,8 @@ class Klm:
     def run(self) -> None:
 
         if self.action == ACTION_IMPORT:
-            self.importer.import_single()
-        
+            self.importer.import_single(True)
+
         else:
             pass
 
